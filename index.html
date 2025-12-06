@@ -1,0 +1,56 @@
+<script type="module" crossorigin src="/pixi-shapes/assets/index-BAPxSJs3.js"></script>
+<link rel="stylesheet" crossorigin href="/pixi-shapes/assets/index-CGf7tu96.css">
+
+<body>
+  <div id="app-root">
+    <!-- Контейнер для Pixi-канваса и панелей -->
+    <div id="canvas-wrapper">
+      <!-- Верхняя панель статистики -->
+      <div id="top-panel">
+        <div class="stat-item">
+          <span>Shapes:</span>
+          <span id="shapes-count">0</span>
+        </div>
+        <span class="stat-separator">|</span>
+        <div class="stat-item">
+          <span>Area:</span>
+          <span id="shapes-area">0</span>
+          <span>px²</span>
+        </div>
+      </div>
+
+      <!-- Контейнер для Pixi-канваса -->
+      <div id="app"></div>
+
+      <!-- Нижняя панель контролов -->
+      <div id="bottom-panel">
+        <div class="control-group">
+          <span>Shapes per second:</span>
+          <button id="btn-shapes-dec">-</button>
+          <input
+            id="shapes-per-second-input"
+            type="number"
+            value="2"
+            min="0"
+            step="1"
+          />
+          <button id="btn-shapes-inc">+</button>
+        </div>
+      
+        <div class="control-group">
+          <span>Gravity:</span>
+          <button id="btn-gravity-dec">-</button>
+          <input
+            id="gravity-input"
+            type="number"
+            value="50"
+            min="0"
+            step="10"
+          />
+          <button id="btn-gravity-inc">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
