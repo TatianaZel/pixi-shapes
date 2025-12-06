@@ -17,7 +17,7 @@ export interface GameConfig {
     rectWidth: 800,
     rectHeight: 500,
   
-    gravity: 10,        // pixels/sec (falling speed)
+    gravity: 100,        // pixels/sec (falling speed)
     shapesPerSecond: 1,  // 1 new shape per second
   };
   
