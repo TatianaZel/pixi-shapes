@@ -44,6 +44,34 @@ import { ControlsPanelView } from './ui/ControlsPanelView';
     gameModel.setGravity(value);
   });
 
+  // Position panels relative to rectangle
+  const updatePanelPositions = () => {
+    const config = gameModel.getConfig();
+    const topPanel = document.getElementById('top-panel');
+    const bottomPanel = document.getElementById('bottom-panel');
+
+    if (topPanel) {
+      const topPanelHeight = topPanel.getBoundingClientRect().height || 40;
+      topPanel.style.left = `${config.rectX}px`;
+      topPanel.style.top = `${config.rectY - topPanelHeight}px`;
+    }
+
+    if (bottomPanel) {
+      bottomPanel.style.left = `${config.rectX}px`;
+      bottomPanel.style.top = `${config.rectY + config.rectHeight}px`;
+    }
+  };
+
+  // Initial positioning (use requestAnimationFrame to ensure DOM is ready)
+  requestAnimationFrame(() => {
+    updatePanelPositions();
+  });
+
+  // Update positions on window resize
+  window.addEventListener('resize', () => {
+    requestAnimationFrame(updatePanelPositions);
+  });
+
   // Main game loop
   app.ticker.add((ticker) => {
     const deltaSeconds = ticker.deltaMS / 1000;
