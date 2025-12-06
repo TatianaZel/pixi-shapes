@@ -20,7 +20,6 @@ A test assignment project implementing falling shapes using Pixi.js. The applica
 
 ```bash
 npm install
-npm run dev
 npm run build
 npm run preview
 ```

@@ -237,7 +237,7 @@ export class GameController {
     const tempContainer = new Container();
 
     // Save original parents so children can be restored later
-    const originalParents: { view: ShapeView; parent: Container }[] = [];
+    const originalParents: { view: ShapeView; parent: Container | null }[] = [];
 
     for (const shapeModel of shapes) {
       const shapeView = this.shapeViews.get(shapeModel.id);
@@ -298,7 +298,9 @@ export class GameController {
     tempContainer.removeChildren();
 
     for (const { view, parent } of originalParents) {
-      parent.addChild(view); // restore original hierarchy
+      if (parent) {
+        parent.addChild(view); // restore original hierarchy
+      }
     }
 
     // Restore original absolute coordinates
