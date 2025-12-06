@@ -1,4 +1,5 @@
 import type { Application } from 'pixi.js';
+import { Container, RenderTexture } from 'pixi.js';
 import type { GameModel } from '../models/GameModel';
 import type { IShapeModel } from '../models/IShapeModel';
 import { ShapeType } from '../models/ShapeType';
@@ -11,12 +12,18 @@ export class GameController {
   private gameView: GameView;
   private spawnTimer = 0;
   private shapeViews: Map<number, ShapeView> = new Map();
+  private app: Application;
+  private model: GameModel;
+  private statsView: StatsPanelView;
 
   constructor(
-    private app: Application,
-    private model: GameModel,
-    private statsView: StatsPanelView,
+    app: Application,
+    model: GameModel,
+    statsView: StatsPanelView,
   ) {
+    this.app = app;
+    this.model = model;
+    this.statsView = statsView;
     this.gameView = new GameView(this.model);
     this.app.stage.addChild(this.gameView);
 
@@ -199,6 +206,119 @@ export class GameController {
 
 
   // ===============================
+  // CALCULATE COVERED AREA (STABLE VERSION)
+  // Shapes fall freely, but pixel measurement is stabilized by coordinate snapping
+  // ===============================
+  private calculateCoveredArea(
+    shapes: IShapeModel[],
+    rectX: number,
+    rectY: number,
+    rectWidth: number,
+    rectHeight: number
+  ): number {
+    if (shapes.length === 0) {
+      return 0;
+    }
+
+    // Align rectangle bounds to full pixel grid
+    const snappedRectX = Math.round(rectX);
+    const snappedRectY = Math.round(rectY);
+    const snappedRectWidth = Math.round(rectWidth);
+    const snappedRectHeight = Math.round(rectHeight);
+
+    // Create RT with resolution 1 so pixel counting is consistent
+    const renderTexture = RenderTexture.create({
+      width: snappedRectWidth,
+      height: snappedRectHeight,
+      resolution: 1,
+    });
+
+    // Temporary container that will hold EXISTING views
+    const tempContainer = new Container();
+
+    // Save original parents so children can be restored later
+    const originalParents: { view: ShapeView; parent: Container }[] = [];
+
+    for (const shapeModel of shapes) {
+      const shapeView = this.shapeViews.get(shapeModel.id);
+
+      if (shapeView) {
+        originalParents.push({ view: shapeView, parent: shapeView.parent });
+
+        // 🔥 we temporarily move ACTUAL view — not recreating new ones
+        // store original coordinates
+        const originalX = shapeView.x;
+        const originalY = shapeView.y;
+
+        // snap coords for precise pixel comparison
+        shapeView.x = Math.round(originalX);
+        shapeView.y = Math.round(originalY);
+
+        tempContainer.addChild(shapeView);
+      }
+    }
+
+    // Shift whole scene so rectangle maps to (0,0)
+    tempContainer.x = -snappedRectX;
+    tempContainer.y = -snappedRectY;
+
+    // Render into off-screen texture
+    this.app.renderer.render(tempContainer, { renderTexture });
+
+    // Extract pixel buffer
+    const canvas = this.app.renderer.extract.canvas(renderTexture);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      tempContainer.removeChildren();
+      renderTexture.destroy();
+      return 0;
+    }
+
+    const imageData = ctx.getImageData(0, 0, snappedRectWidth, snappedRectHeight);
+    const pixels = imageData.data;
+
+    let filledPixels = 0;
+
+    // Count ONLY truly opaque pixels
+    for (let i = 0; i < pixels.length; i += 4) {
+      const alpha = pixels[i + 3];
+
+      // Ignore semi-transparent antialiasing-subpixels
+      if (alpha >= 250) {
+        filledPixels++;
+      }
+    }
+
+    // Smooth noise spikes so moving shapes don't jitter values
+    const stabilizedArea = Math.round(filledPixels);
+
+    // ===============================
+    // RESTORE STAGE STATE
+    // ===============================
+    tempContainer.removeChildren();
+
+    for (const { view, parent } of originalParents) {
+      parent.addChild(view); // restore original hierarchy
+    }
+
+    // Restore original absolute coordinates
+    // (Reverse snapping so rendering is visually unchanged)
+    for (const shapeModel of shapes) {
+      const shapeView = this.shapeViews.get(shapeModel.id);
+      if (shapeView) {
+        shapeView.x = shapeModel.x; // restore float values
+        shapeView.y = shapeModel.y;
+      }
+    }
+
+    // Cleanup GPU resources
+    renderTexture.destroy();
+
+    return stabilizedArea;
+  }
+
+
+  // ===============================
   // UPDATE EVERY FRAME
   // ===============================
   update(deltaSeconds: number) {
@@ -240,6 +360,12 @@ export class GameController {
       this.shapeIntersectsRect(shape, config.rectX, config.rectY, config.rectWidth, config.rectHeight)
     );
     this.statsView.setShapeCount(intersectingShapes.length);
+
+    // ===============================
+    // CALCULATE COVERED AREA USING PIXEL COUNTING
+    // ===============================
+    const coveredArea = this.calculateCoveredArea(intersectingShapes, config.rectX, config.rectY, config.rectWidth, config.rectHeight);
+    this.statsView.setTotalArea(coveredArea);
   }
 
 }
