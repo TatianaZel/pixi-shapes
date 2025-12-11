@@ -245,7 +245,6 @@ export class GameController {
       if (shapeView) {
         originalParents.push({ view: shapeView, parent: shapeView.parent });
 
-        // 🔥 we temporarily move ACTUAL view — not recreating new ones
         // store original coordinates
         const originalX = shapeView.x;
         const originalY = shapeView.y;
